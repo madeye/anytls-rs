@@ -63,6 +63,13 @@ notify = "8.2"
 x509-parser = "0.18"
 chrono = "0.4"
 
+# libc is only used by the Android socket-protect helper (EINPROGRESS check
+# on the non-blocking connect). Off-Android, the helper compiles down to a
+# direct `TcpStream::connect` / `UdpSocket::bind` and the dep is never
+# pulled in.
+[target.'cfg(target_os = "android")'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.8"

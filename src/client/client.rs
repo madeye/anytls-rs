@@ -6,7 +6,6 @@ use crate::session::{Session, SessionHeartbeatConfig};
 use crate::util::{AnyTlsError, Result, configure_tcp_stream, hash_password, send_authentication};
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::sync::Arc;
-use tokio::net::TcpStream;
 use tokio::time::Duration;
 use tokio_rustls::rustls::pki_types::ServerName;
 
@@ -217,7 +216,11 @@ impl Client {
             "[Client] Connecting TCP to {} (this may trigger DNS lookup)",
             self.server_addr
         );
-        let tcp_stream = match TcpStream::connect(&self.server_addr).await {
+        // Dial via the socket-protect helper so a host VPN (Android) can
+        // call `VpnService.protect(fd)` on the outbound socket before the
+        // SYN — otherwise the connection loops back into the same VPN.
+        // Off-Android the helper degrades to `TcpStream::connect`.
+        let tcp_stream = match crate::util::socket_protect::connect_tcp(&self.server_addr).await {
             Ok(stream) => stream,
             Err(e) => {
                 tracing::error!("[Client] Failed to connect to {}: {}", self.server_addr, e);

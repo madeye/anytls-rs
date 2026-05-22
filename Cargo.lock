@@ -47,6 +47,7 @@ dependencies = [
  "bytes",
  "chrono",
  "criterion",
+ "libc",
  "md5",
  "notify",
  "once_cell",

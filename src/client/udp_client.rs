@@ -66,11 +66,16 @@ impl Client {
             stream.id()
         );
 
-        // Step 3: Create local UDP socket
-        let local_udp = UdpSocket::bind(local_addr).await.map_err(|e| {
-            tracing::error!("[UDP Client] Failed to bind UDP socket: {}", e);
-            AnyTlsError::Io(e)
-        })?;
+        // Step 3: Create local UDP socket via the socket-protect helper so a
+        // host VPN (Android) can call `VpnService.protect(fd)` before the
+        // bind — otherwise relayed datagrams loop back into the same VPN.
+        // Off-Android the helper degrades to `UdpSocket::bind`.
+        let local_udp = crate::util::socket_protect::bind_udp(local_addr)
+            .await
+            .map_err(|e| {
+                tracing::error!("[UDP Client] Failed to bind UDP socket: {}", e);
+                AnyTlsError::Io(e)
+            })?;
 
         let bound_addr = local_udp.local_addr()?;
         tracing::debug!("[UDP Client] Local UDP socket bound to {}", bound_addr);
